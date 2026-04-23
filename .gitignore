@@ -1,0 +1,40 @@
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+ml/.venv/
+venv/
+
+# Node
+web/node_modules/
+npm-debug.log*
+
+# Secrets
+.env
+.env.*
+!.env.example
+web/.env
+ml/.env
+
+# Generated datasets
+ml/data/raw/*.csv
+ml/data/processed/*
+!ml/data/processed/.gitkeep
+!ml/data/raw/.gitkeep
+
+# Trained models and reports
+ml/models/*
+!ml/models/.gitkeep
+ml/reports/*
+!ml/reports/.gitkeep
+
+# Local artifacts
+*.log
