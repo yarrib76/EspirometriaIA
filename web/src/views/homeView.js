@@ -570,7 +570,11 @@ function renderHomePage() {
           </section>
 
           <nav class="menu">
-            <button type="button" class="menu-button active" data-target="training-screen">
+            <button type="button" class="menu-button active" data-target="home-screen">
+              <strong>Inicio</strong>
+              <span>Portada del trabajo práctico y resumen del sistema.</span>
+            </button>
+            <button type="button" class="menu-button" data-target="training-screen">
               <strong>Entrenamiento</strong>
               <span>Cargá un dataset CSV y generá una nueva corrida del modelo.</span>
             </button>
@@ -582,7 +586,73 @@ function renderHomePage() {
         </aside>
 
         <section class="content">
-          <section id="training-screen" class="screen active">
+          <section id="home-screen" class="screen active">
+            <article class="hero">
+              <span class="eyebrow">Trabajo práctico</span>
+              <h2>Modelizado de sistema de IA</h2>
+              <p>
+                Sistema de apoyo para interpretación funcional de espirometrías. Permite entrenar
+                un modelo con datasets propios, cargar estudios desde PDF, estimar el patrón
+                espirométrico y consultar métricas de entrenamiento del último modelo generado.
+              </p>
+              <div class="facts">
+                <div class="fact">
+                  <strong>Entrenamiento</strong>
+                  <span>Carga de dataset CSV y generación de modelos versionados.</span>
+                </div>
+                <div class="fact">
+                  <strong>Diagnóstico</strong>
+                  <span>Interpretación de patrón normal, obstructivo, restrictivo o mixto.</span>
+                </div>
+                <div class="fact">
+                  <strong>Reportes</strong>
+                  <span>Consulta de métricas y configuración del último entrenamiento.</span>
+                </div>
+              </div>
+            </article>
+
+            <section class="split">
+              <section class="card">
+                <div>
+                  <h3>Alumnos</h3>
+                  <p class="subtitle">Integrantes del trabajo práctico.</p>
+                </div>
+                <div class="metric-list">
+                  <div class="metric-item">
+                    <strong>Arribas Yamil</strong>
+                    <span>Alumno</span>
+                  </div>
+                  <div class="metric-item">
+                    <strong>Montaña Leandro</strong>
+                    <span>Alumno</span>
+                  </div>
+                  <div class="metric-item">
+                    <strong>Reinehr Tania</strong>
+                    <span>Alumno</span>
+                  </div>
+                  <div class="metric-item">
+                    <strong>Pronesti Gabriel</strong>
+                    <span>Alumno</span>
+                  </div>
+                </div>
+              </section>
+
+              <section class="card">
+                <div>
+                  <h3>Profesor</h3>
+                  <p class="subtitle">Responsable académico.</p>
+                </div>
+                <div class="metric-list">
+                  <div class="metric-item">
+                    <strong>Ingeniero Leonardo D'Astoli</strong>
+                    <span>Profesor</span>
+                  </div>
+                </div>
+              </section>
+            </section>
+          </section>
+
+          <section id="training-screen" class="screen">
             <article class="hero">
               <span class="eyebrow">Entrenamiento del modelo</span>
               <h2>Subí un dataset y lanzá una nueva corrida</h2>
