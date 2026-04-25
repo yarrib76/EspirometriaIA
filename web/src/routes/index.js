@@ -26,5 +26,6 @@ router.get("/health", predictionController.health);
 router.post("/predict", predictionController.predict);
 router.post("/extract-pdf", upload.single("spirometryPdf"), predictionController.extractPdf);
 router.post("/train", csvUpload.single("datasetCsv"), predictionController.trainModel);
+router.get("/training/latest", predictionController.latestTraining);
 
 module.exports = router;

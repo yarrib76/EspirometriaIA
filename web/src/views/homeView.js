@@ -633,20 +633,15 @@ function renderHomePage() {
               <section class="card">
                 <div>
                   <h3>Resultado del entrenamiento</h3>
-                  <p class="subtitle">Se informan dataset cargado, modelo generado y rutas de salida.</p>
+                  <p class="subtitle">Se muestra el último modelo entrenado disponible en el servidor.</p>
                 </div>
 
                 <article class="train-card">
                   <div class="metric-list" id="training-summary">
                     <div class="metric-item">
-                      <strong>Sin corridas en esta sesión</strong>
-                      <span>Subí un CSV y ejecutá el entrenamiento para ver el resultado aquí.</span>
+                      <strong>Cargando último entrenamiento</strong>
+                      <span>Consultando los reportes guardados en el servidor.</span>
                     </div>
-                  </div>
-
-                  <div>
-                    <div class="result-label">Respuesta cruda</div>
-                    <pre id="training-raw-result" class="raw-box">Todavía no hay respuesta del entrenamiento.</pre>
                   </div>
                 </article>
               </section>
@@ -839,7 +834,6 @@ function renderHomePage() {
         const trainSubmitButton = document.getElementById("train-submit-button");
         const trainStatus = document.getElementById("train-status");
         const trainingSummary = document.getElementById("training-summary");
-        const trainingRawResult = document.getElementById("training-raw-result");
         const reportModal = document.getElementById("report-modal");
         const reportModalClose = document.getElementById("report-modal-close");
         const reportModalContent = document.getElementById("report-modal-content");
@@ -969,6 +963,16 @@ function renderHomePage() {
 
         function renderTrainingSummary(body) {
           latestTrainingReport = body.training_report || null;
+          if (body.has_training === false) {
+            trainingSummary.innerHTML = \`
+              <div class="metric-item">
+                <strong>Sin entrenamientos guardados</strong>
+                <span>Subí un CSV y ejecutá el entrenamiento para generar el primer modelo.</span>
+              </div>
+            \`;
+            return;
+          }
+
           const rows = [
             { label: "Dataset cargado", value: body.dataset_path || "No informado" },
             { label: "Modelo generado", value: body.model_dir || "No informado" },
@@ -991,11 +995,59 @@ function renderHomePage() {
           }
         }
 
+        async function loadLatestTraining() {
+          try {
+            const response = await fetch("/training/latest");
+            const body = await response.json();
+
+            if (!response.ok) {
+              trainingSummary.innerHTML = \`
+                <div class="metric-item">
+                  <strong>No se pudo cargar el último entrenamiento</strong>
+                  <span>\${body.error || "Error consultando el servidor."}</span>
+                </div>
+              \`;
+              return;
+            }
+
+            renderTrainingSummary(body);
+            trainStatus.textContent = body.has_training
+              ? "Último entrenamiento cargado desde el servidor."
+              : "No hay entrenamientos guardados todavía.";
+          } catch (error) {
+            trainingSummary.innerHTML = \`
+              <div class="metric-item">
+                <strong>No se pudo cargar el último entrenamiento</strong>
+                <span>\${error.message || "Error de conexión."}</span>
+              </div>
+            \`;
+          }
+        }
+
         function openTrainingReportModal() {
           const report = latestTrainingReport;
           if (!report) {
             return;
           }
+
+          const metrics = report.metrics || {};
+          const summaryItems = [
+            ["Accuracy test", metrics.test?.accuracy],
+            ["Loss test", metrics.test?.loss],
+            ["Accuracy validación", metrics.validation?.accuracy],
+            ["Accuracy train", metrics.train?.accuracy],
+          ]
+            .filter(([, value]) => value !== undefined && value !== null)
+            .map(([label, value]) => {
+              const display = typeof value === "number" ? value.toFixed(4) : value;
+              return \`
+                <div class="report-box">
+                  <strong>\${label}</strong>
+                  <pre>\${display}</pre>
+                </div>
+              \`;
+            })
+            .join("");
 
           const sections = [
             { title: "Métricas", payload: report.metrics },
@@ -1005,7 +1057,8 @@ function renderHomePage() {
 
           reportModalContent.innerHTML =
             sections.length > 0
-              ? sections
+              ? summaryItems +
+                sections
                   .map(
                     (section) => \`
                       <div class="report-box">
@@ -1047,7 +1100,6 @@ function renderHomePage() {
           trainSubmitButton.disabled = true;
           trainSubmitButton.textContent = "Entrenando...";
           trainStatus.textContent = "Copiando dataset y ejecutando el entrenamiento en Python.";
-          trainingRawResult.textContent = JSON.stringify({ dataset: file.name }, null, 2);
 
           try {
             const response = await fetch("/train", {
@@ -1058,17 +1110,14 @@ function renderHomePage() {
 
             if (!response.ok) {
               trainStatus.textContent = body.error || "No se pudo completar el entrenamiento.";
-              trainingRawResult.textContent = JSON.stringify(body, null, 2);
               return;
             }
 
             renderTrainingSummary(body);
-            trainingRawResult.textContent = JSON.stringify(body, null, 2);
             trainStatus.textContent = "Entrenamiento finalizado correctamente.";
           } catch (error) {
             const body = { error: error.message || "Falló la conexión durante el entrenamiento." };
             trainStatus.textContent = body.error;
-            trainingRawResult.textContent = JSON.stringify(body, null, 2);
           } finally {
             trainSubmitButton.disabled = false;
             trainSubmitButton.textContent = "Cargar y entrenar";
@@ -1159,6 +1208,8 @@ function renderHomePage() {
             submitButton.textContent = "Interpretar espirometría";
           }
         });
+
+        loadLatestTraining();
       </script>
     </body>
   </html>

@@ -6,6 +6,8 @@ const WEB_DIR = path.resolve(__dirname, "../..");
 const PROJECT_ROOT = path.resolve(WEB_DIR, "..");
 const ML_DIR = path.resolve(PROJECT_ROOT, "ml");
 const RAW_DATA_DIR = path.resolve(ML_DIR, "data", "raw");
+const MODELS_DIR = path.resolve(ML_DIR, "models");
+const REPORTS_DIR = path.resolve(ML_DIR, "reports");
 const DEFAULT_PYTHON = path.resolve(ML_DIR, ".venv", "Scripts", "python.exe");
 const PYTHON_BIN = process.env.ML_PYTHON_BIN || DEFAULT_PYTHON;
 const TRAIN_MODULE = "src.training.train_baseline";
@@ -99,6 +101,41 @@ async function loadTrainingReport(reportDir) {
   };
 }
 
+async function listExperimentDirs(baseDir) {
+  try {
+    const entries = await fs.readdir(baseDir, { withFileTypes: true });
+    return entries
+      .filter((entry) => entry.isDirectory() && entry.name.startsWith("exp_"))
+      .map((entry) => path.join(baseDir, entry.name))
+      .sort();
+  } catch (_error) {
+    return [];
+  }
+}
+
+async function getLatestTraining() {
+  const reportDirs = await listExperimentDirs(REPORTS_DIR);
+  const modelDirs = await listExperimentDirs(MODELS_DIR);
+  const reportDir = reportDirs.at(-1) || null;
+  const modelDir = modelDirs.at(-1) || null;
+
+  if (!reportDir && !modelDir) {
+    return {
+      has_training: false,
+      training_report: null,
+    };
+  }
+
+  const report = await loadTrainingReport(reportDir);
+  return {
+    has_training: true,
+    dataset_path: report?.metrics?.dataset_path || null,
+    model_dir: modelDir,
+    report_dir: reportDir,
+    training_report: report,
+  };
+}
+
 async function uploadDatasetAndTrain(file) {
   const datasetPath = await persistDataset(file);
   const training = await runTraining(datasetPath);
@@ -110,4 +147,4 @@ async function uploadDatasetAndTrain(file) {
   };
 }
 
-module.exports = { uploadDatasetAndTrain };
+module.exports = { getLatestTraining, uploadDatasetAndTrain };

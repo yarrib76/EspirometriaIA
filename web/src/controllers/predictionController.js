@@ -58,10 +58,22 @@ async function trainModel(req, res) {
   }
 }
 
+async function latestTraining(req, res) {
+  try {
+    const result = await mlTrainingClient.getLatestTraining();
+    return res.json(result);
+  } catch (error) {
+    return res.status(error.statusCode || 502).json({
+      error: error.message || "No se pudo obtener el ultimo entrenamiento.",
+    });
+  }
+}
+
 module.exports = {
   renderHome,
   health,
   predict,
   extractPdf,
   trainModel,
+  latestTraining,
 };
