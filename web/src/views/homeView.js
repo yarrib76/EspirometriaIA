@@ -533,6 +533,20 @@ function renderHomePage() {
           color: var(--text);
         }
 
+        .report-box.wide {
+          grid-column: 1 / -1;
+        }
+
+        .confusion-matrix {
+          width: 100%;
+          max-height: 520px;
+          object-fit: contain;
+          margin-top: 12px;
+          border-radius: 8px;
+          background: #fff;
+          border: 1px solid rgba(75, 96, 112, 0.12);
+        }
+
         @media (max-width: 1100px) {
           .split,
           .facts {
@@ -1124,10 +1138,19 @@ function renderHomePage() {
             { title: "Configuración", payload: report.config },
             { title: "Artefactos", payload: report.artifacts },
           ].filter((section) => section.payload);
+          const confusionMatrix = report.confusion_matrix_url
+            ? \`
+              <div class="report-box wide">
+                <strong>Matriz de confusión</strong>
+                <img class="confusion-matrix" src="\${report.confusion_matrix_url}" alt="Matriz de confusión del entrenamiento" />
+              </div>
+            \`
+            : "";
 
           reportModalContent.innerHTML =
             sections.length > 0
-              ? summaryItems +
+              ? confusionMatrix +
+                summaryItems +
                 sections
                   .map(
                     (section) => \`

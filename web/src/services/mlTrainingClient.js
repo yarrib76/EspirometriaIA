@@ -94,11 +94,26 @@ async function loadTrainingReport(reportDir) {
     return null;
   }
 
+  const confusionMatrixPath = path.join(reportDir, "confusion_matrix.png");
+
   return {
     metrics: await readJsonIfExists(path.join(reportDir, "metrics.json")),
     config: await readJsonIfExists(path.join(reportDir, "config.json")),
     artifacts: await readJsonIfExists(path.join(reportDir, "artifacts.json")),
+    confusion_matrix_url: `/training/report-image?path=${encodeURIComponent(confusionMatrixPath)}`,
   };
+}
+
+async function getReportImagePath(imagePath) {
+  const resolvedPath = path.resolve(String(imagePath || ""));
+  const resolvedReportsDir = path.resolve(REPORTS_DIR);
+
+  if (!resolvedPath.startsWith(resolvedReportsDir) || path.basename(resolvedPath) !== "confusion_matrix.png") {
+    throw new Error("Imagen de reporte inválida.");
+  }
+
+  await fs.access(resolvedPath);
+  return resolvedPath;
 }
 
 async function listExperimentDirs(baseDir) {
@@ -147,4 +162,4 @@ async function uploadDatasetAndTrain(file) {
   };
 }
 
-module.exports = { getLatestTraining, uploadDatasetAndTrain };
+module.exports = { getLatestTraining, getReportImagePath, uploadDatasetAndTrain };

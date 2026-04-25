@@ -69,6 +69,17 @@ async function latestTraining(req, res) {
   }
 }
 
+async function reportImage(req, res) {
+  try {
+    const imagePath = await mlTrainingClient.getReportImagePath(req.query.path);
+    return res.sendFile(imagePath);
+  } catch (error) {
+    return res.status(404).json({
+      error: error.message || "No se pudo obtener la imagen del reporte.",
+    });
+  }
+}
+
 module.exports = {
   renderHome,
   health,
@@ -76,4 +87,5 @@ module.exports = {
   extractPdf,
   trainModel,
   latestTraining,
+  reportImage,
 };
