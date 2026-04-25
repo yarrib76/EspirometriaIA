@@ -1,6 +1,7 @@
 const OPENAI_API_URL = "https://api.openai.com/v1/responses";
 const OPENAI_FILES_API_URL = "https://api.openai.com/v1/files";
 const OPENAI_MODEL = process.env.OPENAI_PDF_MODEL || "gpt-4o-mini";
+const IMAGE_MIME_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
 
 const EXTRACTION_SCHEMA = {
   type: "object",
@@ -94,9 +95,15 @@ function normalizeExtractedFields(fields) {
   };
 }
 
-async function extractFieldsFromPdf(file) {
-  ensureApiKey();
+function isPdf(file) {
+  return file.mimetype === "application/pdf" || file.originalname.toLowerCase().endsWith(".pdf");
+}
 
+function isImage(file) {
+  return IMAGE_MIME_TYPES.has(file.mimetype);
+}
+
+async function buildPdfInputContent(file) {
   const uploadForm = new FormData();
   uploadForm.append("purpose", "user_data");
   uploadForm.append(
@@ -116,7 +123,7 @@ async function extractFieldsFromPdf(file) {
   const uploadData = await uploadResponse.json().catch(() => ({}));
   if (!uploadResponse.ok) {
     const message =
-      uploadData.error?.message || uploadData.error || "OpenAI no pudo subir el PDF.";
+      uploadData.error?.message || uploadData.error || "OpenAI no pudo subir el archivo.";
     const error = new Error(message);
     error.statusCode = uploadResponse.status;
     throw error;
@@ -124,10 +131,42 @@ async function extractFieldsFromPdf(file) {
 
   const fileId = uploadData.id;
   if (!fileId) {
-    const error = new Error("OpenAI no devolvió un file_id para el PDF.");
+    const error = new Error("OpenAI no devolvió un file_id para el archivo.");
     error.statusCode = 502;
     throw error;
   }
+
+  return {
+    type: "input_file",
+    file_id: fileId,
+  };
+}
+
+function buildImageInputContent(file) {
+  const dataUrl = `data:${file.mimetype};base64,${file.buffer.toString("base64")}`;
+  return {
+    type: "input_image",
+    image_url: dataUrl,
+  };
+}
+
+async function buildClinicalFileContent(file) {
+  if (isPdf(file)) {
+    return buildPdfInputContent(file);
+  }
+
+  if (isImage(file)) {
+    return buildImageInputContent(file);
+  }
+
+  const error = new Error("Formato no soportado. Subí un PDF o una imagen JPG, PNG o WEBP.");
+  error.statusCode = 400;
+  throw error;
+}
+
+async function extractFieldsFromPdf(file) {
+  ensureApiKey();
+  const clinicalFileContent = await buildClinicalFileContent(file);
 
   const response = await fetch(OPENAI_API_URL, {
     method: "POST",
@@ -155,14 +194,11 @@ async function extractFieldsFromPdf(file) {
         {
           role: "user",
           content: [
-            {
-              type: "input_file",
-              file_id: fileId,
-            },
+            clinicalFileContent,
             {
               type: "input_text",
               text:
-                "Lee esta espirometría en PDF y completa Edad, Genero, Altura_cm, Peso_kg, FVC, FEV1, FVC_pct_pred, FEV1_pct_pred, Post_BD_FVC, Post_BD_FEV1, Fumador y Calidad_Espirometria. " +
+                "Lee esta espirometría en PDF o imagen y completa Edad, Genero, Altura_cm, Peso_kg, FVC, FEV1, FVC_pct_pred, FEV1_pct_pred, Post_BD_FVC, Post_BD_FEV1, Fumador y Calidad_Espirometria. " +
                 "Prioriza los valores prebroncodilatador para FVC y FEV1. Si no existen valores postbroncodilatador, devuelve null en esos campos.",
             },
           ],
@@ -171,7 +207,7 @@ async function extractFieldsFromPdf(file) {
       text: {
         format: {
           type: "json_schema",
-          name: "spirometry_pdf_extraction",
+          name: "spirometry_file_extraction",
           strict: true,
           schema: EXTRACTION_SCHEMA,
         },
@@ -182,7 +218,7 @@ async function extractFieldsFromPdf(file) {
   const data = await response.json().catch(() => ({}));
   if (!response.ok) {
     const message =
-      data.error?.message || data.error || "OpenAI no pudo procesar el PDF de espirometría.";
+      data.error?.message || data.error || "OpenAI no pudo procesar el archivo de espirometría.";
     const error = new Error(message);
     error.statusCode = response.status;
     throw error;

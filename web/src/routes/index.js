@@ -7,9 +7,16 @@ const upload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 15 * 1024 * 1024 },
   fileFilter: (_req, file, callback) => {
-    const isPdf =
-      file.mimetype === "application/pdf" || file.originalname.toLowerCase().endsWith(".pdf");
-    callback(isPdf ? null : new Error("Solo se permiten archivos PDF."), isPdf);
+    const lowerName = file.originalname.toLowerCase();
+    const allowedMimeTypes = new Set(["application/pdf", "image/jpeg", "image/png", "image/webp"]);
+    const isSupported =
+      allowedMimeTypes.has(file.mimetype) ||
+      lowerName.endsWith(".pdf") ||
+      lowerName.endsWith(".jpg") ||
+      lowerName.endsWith(".jpeg") ||
+      lowerName.endsWith(".png") ||
+      lowerName.endsWith(".webp");
+    callback(isSupported ? null : new Error("Solo se permiten archivos PDF o imágenes JPG, PNG o WEBP."), isSupported);
   },
 });
 const csvUpload = multer({

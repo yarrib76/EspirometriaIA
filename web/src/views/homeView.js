@@ -606,7 +606,7 @@ function renderHomePage() {
               <h2>Modelizado de sistema de IA</h2>
               <p>
                 Sistema de apoyo para interpretación funcional de espirometrías. Permite entrenar
-                un modelo con datasets propios, cargar estudios desde PDF, estimar el patrón
+                un modelo con datasets propios, cargar estudios desde PDF o imagen, estimar el patrón
                 espirométrico y consultar métricas de entrenamiento del último modelo generado.
               </p>
               <div class="facts">
@@ -760,20 +760,20 @@ function renderHomePage() {
               <section class="card">
                 <div>
                   <h3>Formulario clínico-funcional</h3>
-                  <p class="subtitle">Podés cargar un PDF de espirometría o completar los datos manualmente.</p>
+                  <p class="subtitle">Podés cargar un PDF o imagen de espirometría, o completar los datos manualmente.</p>
                 </div>
 
                 <section class="group">
-                  <div class="group-title">Carga automática desde PDF</div>
+                  <div class="group-title">Carga automática desde archivo</div>
                   <form id="pdf-form">
                     <label>
-                      Informe de espirometría en PDF
-                      <input id="pdf-input" name="spirometryPdf" type="file" accept=".pdf,application/pdf" required />
+                      Informe de espirometría en PDF o imagen
+                      <input id="pdf-input" name="spirometryPdf" type="file" accept=".pdf,application/pdf,.jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" required />
                       <span class="hint">El sistema intentará leer valores basales, porcentajes predichos y post-BD.</span>
                     </label>
                     <div class="actions">
-                      <button id="pdf-submit-button" class="primary-button" type="submit">Cargar PDF y completar</button>
-                      <span id="upload-status" class="upload-status">Sin PDF cargado.</span>
+                      <button id="pdf-submit-button" class="primary-button" type="submit">Cargar archivo y completar</button>
+                      <span id="upload-status" class="upload-status">Sin archivo cargado.</span>
                     </div>
                   </form>
                 </section>
@@ -1221,7 +1221,7 @@ function renderHomePage() {
           event.preventDefault();
           const file = pdfInput.files[0];
           if (!file) {
-            uploadStatus.textContent = "Seleccioná un PDF antes de continuar.";
+            uploadStatus.textContent = "Seleccioná un PDF o imagen antes de continuar.";
             return;
           }
 
@@ -1229,8 +1229,8 @@ function renderHomePage() {
           formData.append("spirometryPdf", file);
 
           pdfSubmitButton.disabled = true;
-          pdfSubmitButton.textContent = "Leyendo PDF...";
-          uploadStatus.textContent = "Enviando PDF a OpenAI para extraer los campos.";
+          pdfSubmitButton.textContent = "Leyendo archivo...";
+          uploadStatus.textContent = "Enviando archivo a OpenAI para extraer los campos.";
           renderWarnings("", [], []);
 
           try {
@@ -1241,7 +1241,7 @@ function renderHomePage() {
             const body = await response.json();
 
             if (!response.ok) {
-              uploadStatus.textContent = body.error || "No se pudo procesar el PDF.";
+              uploadStatus.textContent = body.error || "No se pudo procesar el archivo.";
               rawResult.textContent = JSON.stringify(body, null, 2);
               renderWarnings("La extracción falló.", [], []);
               return;
@@ -1252,12 +1252,12 @@ function renderHomePage() {
             rawResult.textContent = JSON.stringify(body, null, 2);
             renderWarnings("Extracción completada.", body.warnings || [], body.missingFields || []);
           } catch (error) {
-            uploadStatus.textContent = error.message || "Falló la conexión durante la carga del PDF.";
+            uploadStatus.textContent = error.message || "Falló la conexión durante la carga del archivo.";
             rawResult.textContent = JSON.stringify({ error: error.message }, null, 2);
             renderWarnings("La extracción falló.", [], []);
           } finally {
             pdfSubmitButton.disabled = false;
-            pdfSubmitButton.textContent = "Cargar PDF y completar";
+            pdfSubmitButton.textContent = "Cargar archivo y completar";
           }
         });
 

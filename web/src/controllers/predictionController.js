@@ -30,7 +30,7 @@ async function predict(req, res) {
 
 async function extractPdf(req, res) {
   if (!req.file) {
-    return res.status(400).json({ error: "Debes subir un archivo PDF." });
+    return res.status(400).json({ error: "Debes subir un archivo PDF o una imagen." });
   }
 
   try {
@@ -38,7 +38,7 @@ async function extractPdf(req, res) {
     return res.json(result);
   } catch (error) {
     return res.status(error.statusCode || 502).json({
-      error: error.message || "No se pudo extraer información desde el PDF.",
+      error: error.message || "No se pudo extraer información desde el archivo.",
     });
   }
 }
