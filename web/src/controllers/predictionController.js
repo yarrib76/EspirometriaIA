@@ -1,5 +1,6 @@
 const predictionRequest = require("../models/predictionRequest");
 const mlApiClient = require("../services/mlApiClient");
+const mlTrainingClient = require("../services/mlTrainingClient");
 const openaiPdfExtractor = require("../services/openaiPdfExtractor");
 const { renderHomePage } = require("../views/homeView");
 
@@ -42,9 +43,25 @@ async function extractPdf(req, res) {
   }
 }
 
+async function trainModel(req, res) {
+  if (!req.file) {
+    return res.status(400).json({ error: "Debes subir un archivo CSV para entrenar." });
+  }
+
+  try {
+    const result = await mlTrainingClient.uploadDatasetAndTrain(req.file);
+    return res.json(result);
+  } catch (error) {
+    return res.status(error.statusCode || 502).json({
+      error: error.message || "No se pudo completar el entrenamiento del modelo.",
+    });
+  }
+}
+
 module.exports = {
   renderHome,
   health,
   predict,
   extractPdf,
+  trainModel,
 };

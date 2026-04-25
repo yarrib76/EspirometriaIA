@@ -13,4 +13,4 @@ Aplicacion Node.js con Express organizada en estilo MVC. Node invoca internament
 - `GET /`: formulario web de prueba.
 - `GET /health`: estado de la app web.
 - `POST /extract-pdf`: sube una espirometría en PDF y devuelve campos extraídos para autocompletar el formulario.
-- `POST /predict`: valida la entrada y ejecuta la inferencia interna en Python.
+- `POST /predict`: valida la entrada, deriva métricas como `FEV1/FVC` y ejecuta la inferencia interna en Python.

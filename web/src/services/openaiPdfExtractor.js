@@ -5,7 +5,21 @@ const OPENAI_MODEL = process.env.OPENAI_PDF_MODEL || "gpt-4o-mini";
 const EXTRACTION_SCHEMA = {
   type: "object",
   additionalProperties: false,
-  required: ["Edad", "Genero", "Altura_cm", "Peso_kg", "FVC", "FEV1", "Fumador", "warnings"],
+  required: [
+    "Edad",
+    "Genero",
+    "Altura_cm",
+    "Peso_kg",
+    "FVC",
+    "FEV1",
+    "FVC_pct_pred",
+    "FEV1_pct_pred",
+    "Post_BD_FVC",
+    "Post_BD_FEV1",
+    "Fumador",
+    "Calidad_Espirometria",
+    "warnings",
+  ],
   properties: {
     Edad: { anyOf: [{ type: "integer" }, { type: "null" }] },
     Genero: { anyOf: [{ type: "string", enum: ["M", "F"] }, { type: "null" }] },
@@ -13,7 +27,12 @@ const EXTRACTION_SCHEMA = {
     Peso_kg: { anyOf: [{ type: "number" }, { type: "null" }] },
     FVC: { anyOf: [{ type: "number" }, { type: "null" }] },
     FEV1: { anyOf: [{ type: "number" }, { type: "null" }] },
+    FVC_pct_pred: { anyOf: [{ type: "number" }, { type: "null" }] },
+    FEV1_pct_pred: { anyOf: [{ type: "number" }, { type: "null" }] },
+    Post_BD_FVC: { anyOf: [{ type: "number" }, { type: "null" }] },
+    Post_BD_FEV1: { anyOf: [{ type: "number" }, { type: "null" }] },
     Fumador: { anyOf: [{ type: "integer", enum: [0, 1] }, { type: "null" }] },
+    Calidad_Espirometria: { anyOf: [{ type: "integer", enum: [0, 1] }, { type: "null" }] },
     warnings: {
       type: "array",
       items: { type: "string" },
@@ -57,7 +76,12 @@ function normalizeExtractedFields(fields) {
     Peso_kg: fields.Peso_kg === null ? "" : String(fields.Peso_kg),
     FVC: fields.FVC === null ? "" : String(fields.FVC),
     FEV1: fields.FEV1 === null ? "" : String(fields.FEV1),
+    FVC_pct_pred: fields.FVC_pct_pred === null ? "" : String(fields.FVC_pct_pred),
+    FEV1_pct_pred: fields.FEV1_pct_pred === null ? "" : String(fields.FEV1_pct_pred),
+    Post_BD_FVC: fields.Post_BD_FVC === null ? "" : String(fields.Post_BD_FVC),
+    Post_BD_FEV1: fields.Post_BD_FEV1 === null ? "" : String(fields.Post_BD_FEV1),
     Fumador: fields.Fumador === null ? "" : String(fields.Fumador),
+    Calidad_Espirometria: fields.Calidad_Espirometria === null ? "" : String(fields.Calidad_Espirometria),
   };
 
   const missing = Object.entries(normalized)
@@ -122,7 +146,9 @@ async function extractFieldsFromPdf(file) {
               text:
                 "Extrae únicamente variables clínicas para un formulario de espirometría. " +
                 "Devuelve solo JSON que cumpla el schema. Si un dato no está presente o no es confiable, usa null y agrega una advertencia en warnings. " +
-                "Normaliza Genero a 'M' o 'F'. Normaliza Fumador a 0 o 1. No inventes valores.",
+                "Normaliza Genero a 'M' o 'F'. Normaliza Fumador a 0 o 1. " +
+                "Si el informe permite inferir que la maniobra es aceptable, usa Calidad_Espirometria=1; si explícitamente no es aceptable, usa 0; si no se informa, usa null. " +
+                "No inventes valores.",
             },
           ],
         },
@@ -136,8 +162,8 @@ async function extractFieldsFromPdf(file) {
             {
               type: "input_text",
               text:
-                "Lee esta espirometría en PDF y completa Edad, Genero, Altura_cm, Peso_kg, FVC, FEV1 y Fumador. " +
-                "Si un campo no aparece claramente, devuelve null.",
+                "Lee esta espirometría en PDF y completa Edad, Genero, Altura_cm, Peso_kg, FVC, FEV1, FVC_pct_pred, FEV1_pct_pred, Post_BD_FVC, Post_BD_FEV1, Fumador y Calidad_Espirometria. " +
+                "Prioriza los valores prebroncodilatador para FVC y FEV1. Si no existen valores postbroncodilatador, devuelve null en esos campos.",
             },
           ],
         },

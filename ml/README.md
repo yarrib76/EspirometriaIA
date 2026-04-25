@@ -1,6 +1,6 @@
-# ML Spirometry Classifier
+# ML Spirometry Interpreter
 
-Proyecto Python para entrenar, evaluar y servir un clasificador multiclase de espirometria con TensorFlow/Keras.
+Proyecto Python para entrenar, evaluar y servir un intérprete funcional de espirometría con TensorFlow/Keras.
 
 ## Estructura
 
@@ -38,8 +38,18 @@ python -m src.inference.service
 - `Peso_kg`
 - `FVC`
 - `FEV1`
+- `FEV1_FVC`
+- `FVC_pct_pred`
+- `FEV1_pct_pred`
+- `Post_BD_FVC`
+- `Post_BD_FEV1`
+- `Post_BD_FEV1_FVC`
+- `BD_FEV1_Delta_ml`
+- `BD_FEV1_Delta_pct`
 - `Fumador`
+- `Calidad_Espirometria`
+- `Broncodilatador_Realizado`
 
 Etiqueta:
 
-- `Diagnostico`
+- `Patron_Espirometrico`

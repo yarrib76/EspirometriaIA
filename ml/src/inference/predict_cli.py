@@ -5,7 +5,8 @@ from pathlib import Path
 
 import tensorflow as tf
 
-from src.config import FEATURE_COLUMNS, MODELS_DIR
+from src.clinical.interpretation import build_interpretation_summary, enrich_payload
+from src.config import MODELS_DIR
 from src.features.preprocessing import load_preprocessing_artifacts, transform_inference_input
 
 
@@ -26,11 +27,7 @@ def load_payload() -> dict:
     if not raw_input:
         raise ValueError("No se recibió payload JSON por stdin.")
 
-    payload = json.loads(raw_input)
-    missing = [field for field in FEATURE_COLUMNS if field not in payload]
-    if missing:
-        raise ValueError(f"Faltan campos obligatorios: {missing}")
-    return payload
+    return json.loads(raw_input)
 
 
 def predict(payload: dict) -> dict:
@@ -40,7 +37,18 @@ def predict(payload: dict) -> dict:
 
     model = tf.keras.models.load_model(model_dir / "model.keras")
     preprocessor, label_encoder = load_preprocessing_artifacts(model_dir)
-    transformed = transform_inference_input(preprocessor, payload)
+    enriched_payload = enrich_payload(payload)
+    interpretation = build_interpretation_summary(enriched_payload)
+
+    if not interpretation["acceptable_quality"]:
+        return {
+            "predicted_class": "No interpretable",
+            "probabilities": {},
+            "interpretation": interpretation,
+            "model_dir": str(model_dir),
+        }
+
+    transformed = transform_inference_input(preprocessor, enriched_payload)
     probabilities = model.predict(transformed, verbose=0)[0]
 
     class_names = label_encoder.classes_.tolist()
@@ -49,6 +57,7 @@ def predict(payload: dict) -> dict:
     return {
         "predicted_class": class_names[predicted_index],
         "probabilities": {class_name: float(probabilities[idx]) for idx, class_name in enumerate(class_names)},
+        "interpretation": interpretation,
         "model_dir": str(model_dir),
     }
 

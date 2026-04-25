@@ -4,7 +4,8 @@ from pathlib import Path
 import tensorflow as tf
 from flask import Flask, jsonify, request
 
-from src.config import FEATURE_COLUMNS, MODELS_DIR
+from src.clinical.interpretation import build_interpretation_summary, enrich_payload
+from src.config import MODELS_DIR
 from src.features.preprocessing import load_preprocessing_artifacts, transform_inference_input
 
 
@@ -33,16 +34,24 @@ def create_app(model_dir: Path | None = None) -> Flask:
     @app.post("/predict")
     def predict():
         payload = request.get_json(silent=True) or {}
-        missing = [field for field in FEATURE_COLUMNS if field not in payload]
-        if missing:
-            return jsonify({"error": f"Faltan campos obligatorios: {missing}"}), 400
 
         try:
-            transformed = transform_inference_input(preprocessor, payload)
-            probabilities = model.predict(transformed, verbose=0)[0]
+            enriched_payload = enrich_payload(payload)
+            interpretation = build_interpretation_summary(enriched_payload)
         except Exception as error:
             return jsonify({"error": f"Payload inválido o no compatible con el modelo: {error}"}), 400
 
+        if not interpretation["acceptable_quality"]:
+            return jsonify(
+                {
+                    "predicted_class": "No interpretable",
+                    "probabilities": {},
+                    "interpretation": interpretation,
+                }
+            )
+
+        transformed = transform_inference_input(preprocessor, enriched_payload)
+        probabilities = model.predict(transformed, verbose=0)[0]
         predicted_index = int(probabilities.argmax())
         class_names = label_encoder.classes_.tolist()
         probability_map = {class_name: float(probabilities[idx]) for idx, class_name in enumerate(class_names)}
@@ -51,6 +60,7 @@ def create_app(model_dir: Path | None = None) -> Flask:
             {
                 "predicted_class": class_names[predicted_index],
                 "probabilities": probability_map,
+                "interpretation": interpretation,
             }
         )
 

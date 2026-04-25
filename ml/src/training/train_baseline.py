@@ -1,4 +1,6 @@
 import json
+import os
+import sys
 from pathlib import Path
 
 import tensorflow as tf
@@ -11,7 +13,7 @@ from src.models.baseline_dense import build_baseline_dense
 from src.utils.io import get_next_experiment_dir, save_json, utc_timestamp
 
 
-def run_training(csv_path: Path = DATASET_PATH) -> tuple[Path, Path]:
+def run_training(csv_path: Path = DATASET_PATH, verbose: int = 1) -> tuple[Path, Path]:
     # Verifica que exista el CSV de entrada antes de iniciar el pipeline.
     if not csv_path.exists():
         raise FileNotFoundError(
@@ -54,7 +56,7 @@ def run_training(csv_path: Path = DATASET_PATH) -> tuple[Path, Path]:
         epochs=100,
         batch_size=32,
         callbacks=[early_stopping],
-        verbose=1,
+        verbose=verbose,
     )
 
     # Evalúa el modelo final en los tres subconjuntos para comparar generalización.
@@ -109,6 +111,14 @@ def run_training(csv_path: Path = DATASET_PATH) -> tuple[Path, Path]:
     return model_dir, report_dir
 
 
+def parse_csv_path_from_argv() -> Path:
+    if len(sys.argv) > 1:
+        return Path(sys.argv[1]).resolve()
+    return DATASET_PATH
+
+
 if __name__ == "__main__":
-    model_output, report_output = run_training()
+    csv_path = parse_csv_path_from_argv()
+    verbose = int(os.getenv("TRAIN_VERBOSE", "1"))
+    model_output, report_output = run_training(csv_path=csv_path, verbose=verbose)
     print(json.dumps({"model_dir": str(model_output), "report_dir": str(report_output)}, indent=2))
