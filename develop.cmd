@@ -10,12 +10,17 @@ set PROJECT_ROOT=%CD%
 set ENV_FILE=%PROJECT_ROOT%\web\.env
 set MODELS_DIR=%PROJECT_ROOT%\ml\models
 set RAW_DATA_DIR=%PROJECT_ROOT%\ml\data\raw
-set SHOULD_BUILD=0
+set SHOULD_BUILD=1
+set FORCE_NO_CACHE=0
 
-if /I "%1"=="build" set SHOULD_BUILD=1
 if /I "%1"=="rebuild" set SHOULD_BUILD=1
+if /I "%1"=="rebuild" set FORCE_NO_CACHE=1
+if /I "%1"=="nobuild" set SHOULD_BUILD=0
 if /I "%1"=="nopull" set SHOULD_PULL=0
 if /I "%2"=="nopull" set SHOULD_PULL=0
+if /I "%2"=="rebuild" set SHOULD_BUILD=1
+if /I "%2"=="rebuild" set FORCE_NO_CACHE=1
+if /I "%2"=="nobuild" set SHOULD_BUILD=0
 
 if "%SHOULD_PULL%"=="1" (
   echo [1/4] Actualizando cambios desde Git...
@@ -35,8 +40,13 @@ echo [2/4] Eliminando contenedor anterior si existe...
 docker rm -f %CONTAINER_NAME% >nul 2>nul
 
 if "%SHOULD_BUILD%"=="1" (
-  echo [3/4] Reconstruyendo imagen...
-  docker build --no-cache -t %IMAGE_NAME% .
+  if "%FORCE_NO_CACHE%"=="1" (
+    echo [3/4] Reconstruyendo imagen sin cache...
+    docker build --no-cache -t %IMAGE_NAME% .
+  ) else (
+    echo [3/4] Reconstruyendo imagen usando cache...
+    docker build -t %IMAGE_NAME% .
+  )
   if errorlevel 1 (
     echo Fallo el build de Docker.
     exit /b 1
@@ -69,8 +79,9 @@ echo Logs:
 echo docker logs %CONTAINER_NAME%
 echo.
 echo Uso:
-echo develop.cmd         ^> hace git pull y recrea el contenedor sin rebuild
-echo develop.cmd build   ^> hace git pull, reconstruye la imagen y recrea el contenedor
-echo develop.cmd nopull  ^> recrea el contenedor sin actualizar desde Git
+echo develop.cmd         ^> hace git pull, reconstruye la imagen usando cache y recrea el contenedor
+echo develop.cmd nobuild ^> hace git pull y recrea el contenedor sin rebuild
+echo develop.cmd rebuild ^> hace git pull, reconstruye la imagen sin cache y recrea el contenedor
+echo develop.cmd nopull  ^> reconstruye usando cache y recrea el contenedor sin actualizar desde Git
 
 endlocal
