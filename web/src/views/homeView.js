@@ -457,6 +457,82 @@ function renderHomePage() {
           margin-bottom: 4px;
         }
 
+        .link-button {
+          margin-top: 10px;
+          border: 1px solid rgba(255, 255, 255, 0.12);
+          background: rgba(255, 255, 255, 0.06);
+          color: #edf4f6;
+          border-radius: 12px;
+          padding: 10px 14px;
+          cursor: pointer;
+        }
+
+        .modal-shell {
+          position: fixed;
+          inset: 0;
+          display: none;
+          align-items: center;
+          justify-content: center;
+          padding: 24px;
+          background: rgba(10, 17, 22, 0.58);
+          backdrop-filter: blur(6px);
+          z-index: 20;
+        }
+
+        .modal-shell.open {
+          display: flex;
+        }
+
+        .modal-card {
+          width: min(900px, 100%);
+          max-height: min(88vh, 920px);
+          overflow: auto;
+          border-radius: 24px;
+          background: #fffdf8;
+          border: 1px solid rgba(75, 96, 112, 0.14);
+          box-shadow: 0 28px 60px rgba(14, 24, 31, 0.26);
+          padding: 24px;
+          display: grid;
+          gap: 18px;
+        }
+
+        .modal-header {
+          display: flex;
+          justify-content: space-between;
+          gap: 16px;
+          align-items: start;
+        }
+
+        .modal-close {
+          border: none;
+          background: rgba(15, 95, 125, 0.1);
+          color: var(--primary);
+          border-radius: 12px;
+          padding: 10px 12px;
+          cursor: pointer;
+        }
+
+        .report-grid {
+          display: grid;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          gap: 12px;
+        }
+
+        .report-box {
+          padding: 16px;
+          border-radius: 16px;
+          background: rgba(15, 95, 125, 0.06);
+          border: 1px solid rgba(15, 95, 125, 0.1);
+        }
+
+        .report-box pre {
+          margin: 10px 0 0;
+          white-space: pre-wrap;
+          word-break: break-word;
+          font-size: 0.86rem;
+          color: var(--text);
+        }
+
         @media (max-width: 1100px) {
           .split,
           .facts {
@@ -475,6 +551,10 @@ function renderHomePage() {
           }
 
           .grid {
+            grid-template-columns: 1fr;
+          }
+
+          .report-grid {
             grid-template-columns: 1fr;
           }
         }
@@ -731,6 +811,25 @@ function renderHomePage() {
         </section>
       </main>
 
+      <div id="report-modal" class="modal-shell" aria-hidden="true">
+        <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="report-modal-title">
+          <div class="modal-header">
+            <div>
+              <div class="eyebrow">Reporte del entrenamiento</div>
+              <h3 id="report-modal-title">Resultados de la corrida</h3>
+            </div>
+            <button id="report-modal-close" class="modal-close" type="button">Cerrar</button>
+          </div>
+
+          <div id="report-modal-content" class="report-grid">
+            <div class="report-box">
+              <strong>Sin reporte</strong>
+              <pre>Todavía no hay métricas para mostrar.</pre>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <script>
         const menuButtons = Array.from(document.querySelectorAll(".menu-button"));
         const screens = Array.from(document.querySelectorAll(".screen"));
@@ -741,6 +840,10 @@ function renderHomePage() {
         const trainStatus = document.getElementById("train-status");
         const trainingSummary = document.getElementById("training-summary");
         const trainingRawResult = document.getElementById("training-raw-result");
+        const reportModal = document.getElementById("report-modal");
+        const reportModalClose = document.getElementById("report-modal-close");
+        const reportModalContent = document.getElementById("report-modal-content");
+        let latestTrainingReport = null;
 
         const form = document.getElementById("prediction-form");
         const pdfForm = document.getElementById("pdf-form");
@@ -865,6 +968,7 @@ function renderHomePage() {
         }
 
         function renderTrainingSummary(body) {
+          latestTrainingReport = body.training_report || null;
           const rows = [
             { label: "Dataset cargado", value: body.dataset_path || "No informado" },
             { label: "Modelo generado", value: body.model_dir || "No informado" },
@@ -876,10 +980,58 @@ function renderHomePage() {
               <div class="metric-item">
                 <strong>\${row.label}</strong>
                 <span>\${row.value}</span>
+                \${row.label === "Reportes" && latestTrainingReport ? "<button id='open-report-modal' class='link-button' type='button'>Ver resultados</button>" : ""}
               </div>
             \`)
             .join("");
+
+          const openReportButton = document.getElementById("open-report-modal");
+          if (openReportButton) {
+            openReportButton.addEventListener("click", openTrainingReportModal);
+          }
         }
+
+        function openTrainingReportModal() {
+          const report = latestTrainingReport;
+          if (!report) {
+            return;
+          }
+
+          const sections = [
+            { title: "Métricas", payload: report.metrics },
+            { title: "Configuración", payload: report.config },
+            { title: "Artefactos", payload: report.artifacts },
+          ].filter((section) => section.payload);
+
+          reportModalContent.innerHTML =
+            sections.length > 0
+              ? sections
+                  .map(
+                    (section) => \`
+                      <div class="report-box">
+                        <strong>\${section.title}</strong>
+                        <pre>\${JSON.stringify(section.payload, null, 2)}</pre>
+                      </div>
+                    \`
+                  )
+                  .join("")
+              : "<div class='report-box'><strong>Sin reporte</strong><pre>No se encontraron archivos JSON de reporte para esta corrida.</pre></div>";
+
+          reportModal.classList.add("open");
+          reportModal.setAttribute("aria-hidden", "false");
+        }
+
+        function closeTrainingReportModal() {
+          reportModal.classList.remove("open");
+          reportModal.setAttribute("aria-hidden", "true");
+        }
+
+        reportModalClose.addEventListener("click", closeTrainingReportModal);
+        reportModal.addEventListener("click", (event) => {
+          if (event.target === reportModal) {
+            closeTrainingReportModal();
+          }
+        });
 
         trainingForm.addEventListener("submit", async (event) => {
           event.preventDefault();

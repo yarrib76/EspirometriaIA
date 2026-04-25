@@ -78,12 +78,35 @@ function runTraining(csvPath) {
   });
 }
 
+async function readJsonIfExists(filePath) {
+  try {
+    const content = await fs.readFile(filePath, "utf-8");
+    return JSON.parse(content);
+  } catch (_error) {
+    return null;
+  }
+}
+
+async function loadTrainingReport(reportDir) {
+  if (!reportDir) {
+    return null;
+  }
+
+  return {
+    metrics: await readJsonIfExists(path.join(reportDir, "metrics.json")),
+    config: await readJsonIfExists(path.join(reportDir, "config.json")),
+    artifacts: await readJsonIfExists(path.join(reportDir, "artifacts.json")),
+  };
+}
+
 async function uploadDatasetAndTrain(file) {
   const datasetPath = await persistDataset(file);
   const training = await runTraining(datasetPath);
+  const trainingReport = await loadTrainingReport(training.report_dir);
   return {
     dataset_path: datasetPath,
     ...training,
+    training_report: trainingReport,
   };
 }
 
