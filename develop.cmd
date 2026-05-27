@@ -8,6 +8,7 @@ cd /d "%~dp0"
 
 set PROJECT_ROOT=%CD%
 set ENV_FILE=%PROJECT_ROOT%\web\.env
+set ENV_EXAMPLE_FILE=%PROJECT_ROOT%\web\.env.example
 set MODELS_DIR=%PROJECT_ROOT%\ml\models
 set RAW_DATA_DIR=%PROJECT_ROOT%\ml\data\raw
 set SHOULD_BUILD=1
@@ -21,6 +22,25 @@ if /I "%2"=="nopull" set SHOULD_PULL=0
 if /I "%2"=="rebuild" set SHOULD_BUILD=1
 if /I "%2"=="rebuild" set FORCE_NO_CACHE=1
 if /I "%2"=="nobuild" set SHOULD_BUILD=0
+
+if not exist "%ENV_FILE%" (
+  if exist "%ENV_EXAMPLE_FILE%" (
+    echo No se encontro web\.env. Creando uno desde web\.env.example...
+    copy "%ENV_EXAMPLE_FILE%" "%ENV_FILE%" >nul
+    if errorlevel 1 (
+      echo No se pudo crear "%ENV_FILE%".
+      exit /b 1
+    )
+    echo Revisa "%ENV_FILE%" y completa OPENAI_API_KEY si vas a usar lectura de PDF con OpenAI.
+    echo.
+  ) else (
+    echo No se encontro el archivo de variables de entorno:
+    echo "%ENV_FILE%"
+    echo.
+    echo Crea ese archivo o ejecuta este script desde la carpeta del proyecto que contiene web\.env.
+    exit /b 1
+  )
+)
 
 if "%SHOULD_PULL%"=="1" (
   echo [1/4] Actualizando cambios desde Git...
