@@ -187,6 +187,7 @@ async function extractFieldsFromPdf(file) {
                 "Devuelve solo JSON que cumpla el schema. Si un dato no está presente o no es confiable, usa null y agrega una advertencia en warnings. " +
                 "Normaliza Genero a 'M' o 'F'. Normaliza Fumador a 0 o 1. " +
                 "Si el informe permite inferir que la maniobra es aceptable, usa Calidad_Espirometria=1; si explícitamente no es aceptable, usa 0; si no se informa, usa null. " +
+                "Nunca uses columnas LLN, LIN, límite inferior, Teór., teórico, predicho, Z-score o %Teór. como valores medidos de FVC o FEV1. " +
                 "No inventes valores.",
             },
           ],
@@ -199,7 +200,11 @@ async function extractFieldsFromPdf(file) {
               type: "input_text",
               text:
                 "Lee esta espirometría en PDF o imagen y completa Edad, Genero, Altura_cm, Peso_kg, FVC, FEV1, FVC_pct_pred, FEV1_pct_pred, Post_BD_FVC, Post_BD_FEV1, Fumador y Calidad_Espirometria. " +
-                "Prioriza los valores prebroncodilatador para FVC y FEV1. Si no existen valores postbroncodilatador, devuelve null en esos campos.",
+                "Para FVC y FEV1 usa el valor medido basal/prebroncodilatador, preferentemente la columna Best o el mejor valor entre PRE #1, PRE #2 y PRE #3. " +
+                "Para FVC_pct_pred y FEV1_pct_pred usa el porcentaje del predicho asociado al valor basal/pre, normalmente la columna %Teór. o %Pred. " +
+                "Para Post_BD_FVC y Post_BD_FEV1 usa exclusivamente la columna POST o postbroncodilatación, no las columnas PRE. " +
+                "Si aparecen columnas LLN/LIN, Teór./Predicho, Best, PRE y POST, interpreta LLN/LIN como límite inferior normal y Teór./Predicho como referencia; no los cargues como FVC ni FEV1. " +
+                "Si no existen valores postbroncodilatador, devuelve null en esos campos.",
             },
           ],
         },
