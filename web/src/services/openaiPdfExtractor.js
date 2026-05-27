@@ -1,6 +1,7 @@
 const OPENAI_API_URL = "https://api.openai.com/v1/responses";
 const OPENAI_FILES_API_URL = "https://api.openai.com/v1/files";
 const OPENAI_MODEL = process.env.OPENAI_PDF_MODEL || "gpt-4o-mini";
+const EXTRACTOR_VERSION = "table-schema-column-guard-v1";
 const IMAGE_MIME_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
 
 const SPIROMETRY_ROW_SCHEMA = {
@@ -343,6 +344,7 @@ async function extractFieldsFromPdf(file) {
   const normalized = normalizeExtractedFields(extracted);
 
   return {
+    extractorVersion: EXTRACTOR_VERSION,
     extracted: normalized.fields,
     missingFields: normalized.missingFields,
     warnings: [...(Array.isArray(extracted.warnings) ? extracted.warnings : []), ...normalized.warnings],
@@ -350,4 +352,4 @@ async function extractFieldsFromPdf(file) {
   };
 }
 
-module.exports = { extractFieldsFromPdf };
+module.exports = { EXTRACTOR_VERSION, extractFieldsFromPdf };

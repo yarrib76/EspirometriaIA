@@ -9,7 +9,12 @@ async function renderHome(req, res) {
 }
 
 async function health(req, res) {
-  res.json({ status: "ok", web: "up", inference_mode: "internal_python" });
+  res.json({
+    status: "ok",
+    web: "up",
+    inference_mode: "internal_python",
+    extractor_version: openaiPdfExtractor.EXTRACTOR_VERSION,
+  });
 }
 
 async function predict(req, res) {
