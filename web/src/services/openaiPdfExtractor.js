@@ -98,6 +98,46 @@ function setValueFromTable(normalized, field, value) {
   }
 }
 
+function asNumber(value) {
+  if (value === "" || value === null || value === undefined) {
+    return null;
+  }
+  const parsed = Number(value);
+  return Number.isNaN(parsed) ? null : parsed;
+}
+
+function nearlyEqual(left, right) {
+  return left !== null && right !== null && Math.abs(left - right) < 0.01;
+}
+
+function detectColumnShift(fields, normalized) {
+  const fvcRow = fields.spirometry_table?.FVC;
+  const fev1Row = fields.spirometry_table?.FEV1;
+  const warnings = [];
+
+  if (fvcRow && nearlyEqual(asNumber(normalized.FVC), asNumber(fvcRow.LLN))) {
+    normalized.FVC = "";
+    warnings.push("FVC fue detectado como LLN en vez de valor medido; revisa manualmente la columna Best/PRE.");
+  }
+
+  if (fev1Row && nearlyEqual(asNumber(normalized.FEV1), asNumber(fev1Row.LLN))) {
+    normalized.FEV1 = "";
+    warnings.push("FEV1 fue detectado como LLN en vez de valor medido; revisa manualmente la columna Best/PRE.");
+  }
+
+  if (nearlyEqual(asNumber(normalized.Post_BD_FVC), asNumber(normalized.FVC))) {
+    normalized.Post_BD_FVC = "";
+    warnings.push("FVC post-BD parece repetir el valor PRE; revisa manualmente la columna POST.");
+  }
+
+  if (nearlyEqual(asNumber(normalized.Post_BD_FEV1), asNumber(normalized.FEV1))) {
+    normalized.Post_BD_FEV1 = "";
+    warnings.push("FEV1 post-BD parece repetir el valor PRE; revisa manualmente la columna POST.");
+  }
+
+  return warnings;
+}
+
 function normalizeExtractedFields(fields) {
   const normalized = {
     Edad: fields.Edad === null ? "" : String(fields.Edad),
@@ -129,6 +169,8 @@ function normalizeExtractedFields(fields) {
     setValueFromTable(normalized, "Post_BD_FEV1", fev1Row.post);
   }
 
+  const extractionWarnings = detectColumnShift(fields, normalized);
+
   const missing = Object.entries(normalized)
     .filter(([, value]) => value === "")
     .map(([key]) => key);
@@ -136,6 +178,7 @@ function normalizeExtractedFields(fields) {
   return {
     fields: normalized,
     missingFields: missing,
+    warnings: extractionWarnings,
   };
 }
 
@@ -302,7 +345,7 @@ async function extractFieldsFromPdf(file) {
   return {
     extracted: normalized.fields,
     missingFields: normalized.missingFields,
-    warnings: Array.isArray(extracted.warnings) ? extracted.warnings : [],
+    warnings: [...(Array.isArray(extracted.warnings) ? extracted.warnings : []), ...normalized.warnings],
     rawModelResponse: extracted,
   };
 }
