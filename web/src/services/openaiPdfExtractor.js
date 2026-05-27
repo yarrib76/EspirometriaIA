@@ -188,6 +188,7 @@ async function extractFieldsFromPdf(file) {
                 "Normaliza Genero a 'M' o 'F'. Normaliza Fumador a 0 o 1. " +
                 "Si el informe permite inferir que la maniobra es aceptable, usa Calidad_Espirometria=1; si explícitamente no es aceptable, usa 0; si no se informa, usa null. " +
                 "Nunca uses columnas LLN, LIN, límite inferior, Teór., teórico, predicho, Z-score o %Teór. como valores medidos de FVC o FEV1. " +
+                "En tablas con columnas LLN, Teór., Best, %Teór., PRE #1/#2/#3 y POST, lee por fila y por columna: para la fila FVC usa Best como FVC y POST como Post_BD_FVC; para la fila FEV1 usa Best como FEV1 y POST como Post_BD_FEV1. " +
                 "No inventes valores.",
             },
           ],
@@ -204,6 +205,8 @@ async function extractFieldsFromPdf(file) {
                 "Para FVC_pct_pred y FEV1_pct_pred usa el porcentaje del predicho asociado al valor basal/pre, normalmente la columna %Teór. o %Pred. " +
                 "Para Post_BD_FVC y Post_BD_FEV1 usa exclusivamente la columna POST o postbroncodilatación, no las columnas PRE. " +
                 "Si aparecen columnas LLN/LIN, Teór./Predicho, Best, PRE y POST, interpreta LLN/LIN como límite inferior normal y Teór./Predicho como referencia; no los cargues como FVC ni FEV1. " +
+                "Ejemplo de mapeo: si la fila FVC dice LLN=2.09, Teór.=2.70, Best=2.61, %Teór.=97 y POST=2.54, devuelve FVC=2.61, FVC_pct_pred=97 y Post_BD_FVC=2.54. " +
+                "Si la fila FEV1 dice LLN=1.59, Teór.=2.11, Best=1.89, %Teór.=90 y POST=1.93, devuelve FEV1=1.89, FEV1_pct_pred=90 y Post_BD_FEV1=1.93. " +
                 "Si no existen valores postbroncodilatador, devuelve null en esos campos.",
             },
           ],
