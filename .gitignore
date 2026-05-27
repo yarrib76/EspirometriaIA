@@ -38,3 +38,6 @@ ml/reports/*
 
 # Local artifacts
 *.log
+
+# Presentaciones
+/presentation/*

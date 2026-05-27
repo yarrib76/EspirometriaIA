@@ -1,0 +1,14 @@
+{
+  "Edad": 45,
+  "Genero": "M",
+  "Altura_cm": 170,
+  "Peso_kg": 80,
+  "FVC": 3.2,
+  "FEV1": 2.4,
+  "FVC_pct_pred": 85,
+  "FEV1_pct_pred": 78,
+  "Post_BD_FVC": 3.3,
+  "Post_BD_FEV1": 2.6,
+  "Fumador": 0,
+  "Calidad_Espirometria": 1
+}
