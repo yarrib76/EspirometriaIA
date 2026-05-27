@@ -81,6 +81,7 @@ docker run -d ^
   -p 6060:6060 ^
   --env-file "%ENV_FILE%" ^
   -e AUTO_BOOTSTRAP_MODEL=false ^
+  -e ML_PYTHON_BIN=/opt/venv/bin/python ^
   -e PORT=6060 ^
   -v "%MODELS_DIR%:/app/ml/models" ^
   -v "%RAW_DATA_DIR%:/app/ml/data/raw" ^
