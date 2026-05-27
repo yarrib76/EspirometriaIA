@@ -3,6 +3,19 @@ const OPENAI_FILES_API_URL = "https://api.openai.com/v1/files";
 const OPENAI_MODEL = process.env.OPENAI_PDF_MODEL || "gpt-4o-mini";
 const IMAGE_MIME_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
 
+const SPIROMETRY_ROW_SCHEMA = {
+  type: "object",
+  additionalProperties: false,
+  required: ["LLN", "predicted", "best", "percent_predicted", "post"],
+  properties: {
+    LLN: { anyOf: [{ type: "number" }, { type: "null" }] },
+    predicted: { anyOf: [{ type: "number" }, { type: "null" }] },
+    best: { anyOf: [{ type: "number" }, { type: "null" }] },
+    percent_predicted: { anyOf: [{ type: "number" }, { type: "null" }] },
+    post: { anyOf: [{ type: "number" }, { type: "null" }] },
+  },
+};
+
 const EXTRACTION_SCHEMA = {
   type: "object",
   additionalProperties: false,
@@ -19,6 +32,7 @@ const EXTRACTION_SCHEMA = {
     "Post_BD_FEV1",
     "Fumador",
     "Calidad_Espirometria",
+    "spirometry_table",
     "warnings",
   ],
   properties: {
@@ -34,6 +48,15 @@ const EXTRACTION_SCHEMA = {
     Post_BD_FEV1: { anyOf: [{ type: "number" }, { type: "null" }] },
     Fumador: { anyOf: [{ type: "integer", enum: [0, 1] }, { type: "null" }] },
     Calidad_Espirometria: { anyOf: [{ type: "integer", enum: [0, 1] }, { type: "null" }] },
+    spirometry_table: {
+      type: "object",
+      additionalProperties: false,
+      required: ["FVC", "FEV1"],
+      properties: {
+        FVC: { anyOf: [SPIROMETRY_ROW_SCHEMA, { type: "null" }] },
+        FEV1: { anyOf: [SPIROMETRY_ROW_SCHEMA, { type: "null" }] },
+      },
+    },
     warnings: {
       type: "array",
       items: { type: "string" },
@@ -69,6 +92,12 @@ function getResponseText(data) {
   return texts.join("\n").trim();
 }
 
+function setValueFromTable(normalized, field, value) {
+  if (value !== undefined && value !== null) {
+    normalized[field] = String(value);
+  }
+}
+
 function normalizeExtractedFields(fields) {
   const normalized = {
     Edad: fields.Edad === null ? "" : String(fields.Edad),
@@ -84,6 +113,21 @@ function normalizeExtractedFields(fields) {
     Fumador: fields.Fumador === null ? "" : String(fields.Fumador),
     Calidad_Espirometria: fields.Calidad_Espirometria === null ? "" : String(fields.Calidad_Espirometria),
   };
+
+  const fvcRow = fields.spirometry_table?.FVC;
+  const fev1Row = fields.spirometry_table?.FEV1;
+
+  if (fvcRow) {
+    setValueFromTable(normalized, "FVC", fvcRow.best);
+    setValueFromTable(normalized, "FVC_pct_pred", fvcRow.percent_predicted);
+    setValueFromTable(normalized, "Post_BD_FVC", fvcRow.post);
+  }
+
+  if (fev1Row) {
+    setValueFromTable(normalized, "FEV1", fev1Row.best);
+    setValueFromTable(normalized, "FEV1_pct_pred", fev1Row.percent_predicted);
+    setValueFromTable(normalized, "Post_BD_FEV1", fev1Row.post);
+  }
 
   const missing = Object.entries(normalized)
     .filter(([, value]) => value === "")
@@ -188,6 +232,7 @@ async function extractFieldsFromPdf(file) {
                 "Devuelve solo JSON que cumpla el schema. Si un dato no está presente o no es confiable, usa null y agrega una advertencia en warnings. " +
                 "Normaliza Genero a 'M' o 'F'. Normaliza Fumador a 0 o 1. " +
                 "Si el informe permite inferir que la maniobra es aceptable, usa Calidad_Espirometria=1; si explícitamente no es aceptable, usa 0; si no se informa, usa null. " +
+                "Completa spirometry_table leyendo literalmente las filas FVC y FEV1 por columna: LLN, predicted/Teór., best, percent_predicted/%Teór. y post/POST. " +
                 "Nunca uses columnas LLN, LIN, límite inferior, Teór., teórico, predicho, Z-score o %Teór. como valores medidos de FVC o FEV1. " +
                 "En tablas con columnas LLN, Teór., Best, %Teór., PRE #1/#2/#3 y POST, lee por fila y por columna: para la fila FVC usa Best como FVC y POST como Post_BD_FVC; para la fila FEV1 usa Best como FEV1 y POST como Post_BD_FEV1. " +
                 "Si no puedes distinguir con certeza la columna Best o POST, devuelve null para ese campo y agrega una advertencia; es preferible null antes que copiar LLN, Teór. o PRE en el campo equivocado. " +
@@ -203,6 +248,7 @@ async function extractFieldsFromPdf(file) {
               type: "input_text",
               text:
                 "Lee esta espirometría en PDF o imagen y completa Edad, Genero, Altura_cm, Peso_kg, FVC, FEV1, FVC_pct_pred, FEV1_pct_pred, Post_BD_FVC, Post_BD_FEV1, Fumador y Calidad_Espirometria. " +
+                "Primero completa spirometry_table con las columnas de la tabla. Luego usa esa tabla para los campos finales. " +
                 "Para FVC y FEV1 usa el valor medido basal/prebroncodilatador, preferentemente la columna Best o el mejor valor entre PRE #1, PRE #2 y PRE #3. " +
                 "Para FVC_pct_pred y FEV1_pct_pred usa el porcentaje del predicho asociado al valor basal/pre, normalmente la columna %Teór. o %Pred. " +
                 "Para Post_BD_FVC y Post_BD_FEV1 usa exclusivamente la columna POST o postbroncodilatación, no las columnas PRE. " +
