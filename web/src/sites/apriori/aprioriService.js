@@ -10,6 +10,14 @@ const RUNS_ROOT = path.join(APRIORI_ROOT, "runs");
 const ACTIVE_RUN_FILE = path.join(RUNS_ROOT, "active_run.json");
 const SETTINGS_FILE = path.join(RUNS_ROOT, "configuracion.json");
 const ALLOWED_FILE_ROOTS = [...CURRENT_ROOTS, RUNS_ROOT];
+const PIPELINE_STEPS = ["extract", "matrix", "itemsets", "rules", "select"];
+const STEP_SCRIPTS = {
+  extract: "extract_transactions.py",
+  matrix: "build_binary_matrix.py",
+  itemsets: "generate_frequent_itemsets.py",
+  rules: "generate_association_rules.py",
+  select: "select_candidate_rules.py",
+};
 let activeRun = null;
 
 function numberInRange(value, name, minimum, maximum, fallback) {
@@ -301,6 +309,85 @@ async function runPipeline(step, input) {
   finally { activeRun = null; }
 }
 
+async function clearDownstreamOutputs(step, outputs) {
+  if (step === "matrix") {
+    await fs.rm(outputs.matrix, { force: true });
+    await fs.rm(outputs.itemsets, { recursive: true, force: true });
+    await fs.rm(outputs.rules, { recursive: true, force: true });
+  } else if (step === "itemsets") {
+    await fs.rm(outputs.itemsets, { recursive: true, force: true });
+    await fs.rm(outputs.rules, { recursive: true, force: true });
+  } else if (step === "rules") {
+    await fs.rm(outputs.rules, { recursive: true, force: true });
+  }
+}
+
+function settingsForReprocess(manifest, input, step) {
+  const requested = normalizeSettings(input);
+  const settings = {
+    ...requested,
+    invoiceLimit: manifest.settings.invoiceLimit,
+    catalogRunId: manifest.settings.catalogRunId,
+  };
+  if (step === "rules") {
+    settings.supports = manifest.settings.supports;
+    if (!settings.supports.includes(settings.selectionSupport)) {
+      throw new Error("El soporte de selección debe existir entre los soportes de la corrida. Reprocesá desde la etapa 03 para cambiar los soportes.");
+    }
+  }
+  return settings;
+}
+
+async function reprocessRun(runId, step, input = {}) {
+  if (activeRun) { const error = new Error("Ya hay un procesamiento Apriori en ejecución."); error.statusCode = 409; throw error; }
+  if (!["matrix", "itemsets", "rules"].includes(step)) throw new Error("Etapa de reprocesamiento inválida.");
+  const validRunId = validateRunId(runId);
+  const manifest = await getRun(validRunId);
+  const settings = settingsForReprocess(manifest, input, step);
+  const runDirectory = path.join(RUNS_ROOT, validRunId);
+  const outputs = runPaths(runDirectory);
+  const startIndex = PIPELINE_STEPS.indexOf(step);
+  const steps = PIPELINE_STEPS.slice(startIndex);
+  const rerunScripts = new Set(steps.map((item) => STEP_SCRIPTS[item]));
+  const startedAt = new Date().toISOString();
+
+  await persistSettings(settings);
+  activeRun = { step, runId: validRunId, startedAt };
+  manifest.status = "running";
+  manifest.updatedAt = startedAt;
+  manifest.reprocessedFrom = step;
+  manifest.settings = settings;
+  manifest.summary = null;
+  manifest.results = (manifest.results || []).filter((result) => !rerunScripts.has(result.step));
+  delete manifest.error;
+  await writeManifest(runDirectory, manifest);
+
+  try {
+    await clearDownstreamOutputs(step, outputs);
+    const results = [];
+    for (const currentStep of steps) {
+      const result = await executeStep(currentStep, settings, outputs);
+      results.push(result);
+      manifest.results.push(result);
+      await writeManifest(runDirectory, manifest);
+    }
+    manifest.summary = await buildSummary(settings, outputs);
+    manifest.status = "completed";
+    manifest.finishedAt = new Date().toISOString();
+    await writeManifest(runDirectory, manifest);
+    await runPython("package_audit.py", ["--run-dir", runDirectory, "--output", path.join(runDirectory, manifest.zipName)]);
+    return { historical: true, reprocessed: true, runId: validRunId, reprocessedFrom: step, settings, summary: manifest.summary, results };
+  } catch (error) {
+    manifest.status = "failed";
+    manifest.finishedAt = new Date().toISOString();
+    manifest.error = error.message;
+    await writeManifest(runDirectory, manifest);
+    throw error;
+  } finally {
+    activeRun = null;
+  }
+}
+
 async function selectSupportForRun(runId, input = {}) {
   if (activeRun) { const error = new Error("Ya hay un procesamiento Apriori en ejecución."); error.statusCode = 409; throw error; }
   const manifest = await getRun(validateRunId(runId));
@@ -390,6 +477,35 @@ async function listRuns() {
   return runs.sort((a, b) => b.startedAt.localeCompare(a.startedAt));
 }
 
+async function deleteAllRuns() {
+  if (activeRun) { const error = new Error("No se pueden eliminar las ejecuciones mientras hay un procesamiento en curso."); error.statusCode = 409; throw error; }
+  await fs.mkdir(RUNS_ROOT, { recursive: true });
+  const entries = await fs.readdir(RUNS_ROOT, { withFileTypes: true });
+  let deletedRuns = 0;
+  for (const entry of entries) {
+    if (entry.isDirectory() && /^\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}-\d{3}$/.test(entry.name)) {
+      await fs.rm(path.join(RUNS_ROOT, entry.name), { recursive: true, force: true });
+      deletedRuns += 1;
+    }
+  }
+  await fs.rm(ACTIVE_RUN_FILE, { force: true });
+  for (const directory of [
+    path.join(APRIORI_ROOT, "data", "extracted"),
+    path.join(APRIORI_ROOT, "data", "processed"),
+    path.join(APRIORI_ROOT, "reports", "itemsets"),
+    path.join(APRIORI_ROOT, "reports", "rules"),
+  ]) {
+    await fs.mkdir(directory, { recursive: true });
+    const generatedEntries = await fs.readdir(directory, { withFileTypes: true });
+    for (const entry of generatedEntries) {
+      if (entry.name !== ".gitkeep") {
+        await fs.rm(path.join(directory, entry.name), { recursive: true, force: true });
+      }
+    }
+  }
+  return { deletedRuns };
+}
+
 async function getActiveRunId() {
   try {
     const value = JSON.parse(await fs.readFile(ACTIVE_RUN_FILE, "utf8"));
@@ -435,4 +551,4 @@ async function resolveRunZip(runId) {
 
 function getStatus() { return { running: Boolean(activeRun), activeRun }; }
 
-module.exports = { activateRun, getActiveRules, getActiveRunId, getRun, getSettings, getStatus, listCsvFiles, listRuns, previewCsv, resetSettings, resolveCsvPath, resolveRunZip, runPipeline, saveSettings, selectSupportForRun };
+module.exports = { activateRun, deleteAllRuns, getActiveRules, getActiveRunId, getRun, getSettings, getStatus, listCsvFiles, listRuns, previewCsv, reprocessRun, resetSettings, resolveCsvPath, resolveRunZip, runPipeline, saveSettings, selectSupportForRun };

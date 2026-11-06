@@ -39,6 +39,8 @@ router.get("/api/apriori/settings", aprioriController.settings);
 router.put("/api/apriori/settings", aprioriController.saveSettings);
 router.delete("/api/apriori/settings", aprioriController.resetSettings);
 router.get("/api/apriori/runs", aprioriController.runs);
+router.delete("/api/apriori/runs", aprioriController.deleteRuns);
+router.post("/api/apriori/reprocess", aprioriController.reprocess);
 router.get("/api/apriori/run-detail", aprioriController.runDetail);
 router.get("/api/apriori/run-zip", aprioriController.runZip);
 router.post("/api/apriori/select-support", aprioriController.selectSupport);

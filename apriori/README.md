@@ -86,3 +86,12 @@ selección es reproducible, pero debe validarse comercialmente antes de activars
 Cada ejecución completa iniciada desde el panel web se guarda en `runs/<fecha-hora>/`. La carpeta
 contiene el resumen de configuración y resultados, los CSV de todas las etapas y un ZIP de
 auditoría. Las corridas pueden consultarse y descargarse desde la misma interfaz.
+
+Las etapas individuales trabajan sobre la corrida histórica seleccionada y mantienen sus
+dependencias: reprocesar desde matriz ejecuta las etapas 2 a 5; desde Apriori, las etapas 3 a 5;
+desde reglas, las etapas 4 y 5; y selección actualiza únicamente la etapa 5. La extracción crea
+una corrida nueva para no sobrescribir el origen de una ejecución anterior.
+
+El panel también permite eliminar todas las ejecuciones históricas y los artefactos generados.
+Esta operación desactiva la corrida usada para recomendaciones, pero conserva la configuración
+de parámetros almacenada en `runs/configuracion.json`.

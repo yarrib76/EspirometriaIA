@@ -33,6 +33,23 @@ async function runs(_req, res) {
   }
 }
 
+async function reprocess(req, res) {
+  try {
+    const result = await aprioriService.reprocessRun(req.body.runId, req.body.step, req.body.settings);
+    return res.json({ ok: true, ...result });
+  } catch (error) {
+    return res.status(error.statusCode || 400).json({ error: error.message });
+  }
+}
+
+async function deleteRuns(_req, res) {
+  try {
+    return res.json({ ok: true, ...(await aprioriService.deleteAllRuns()) });
+  } catch (error) {
+    return res.status(error.statusCode || 500).json({ error: error.message });
+  }
+}
+
 async function runDetail(req, res) {
   try {
     return res.json(await aprioriService.getRun(req.query.run));
@@ -147,4 +164,4 @@ async function recommendationProducts(req, res) {
   }
 }
 
-module.exports = { activateRun, download, files, orderDetail, orders, preview, recommend, recommendationProducts, renderHome, resetSettings, run, runDetail, runs, runZip, saveSettings, selectSupport, settings, status };
+module.exports = { activateRun, deleteRuns, download, files, orderDetail, orders, preview, recommend, recommendationProducts, renderHome, reprocess, resetSettings, run, runDetail, runs, runZip, saveSettings, selectSupport, settings, status };
