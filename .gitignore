@@ -40,7 +40,7 @@ ml/models/*
 !ml/models/.gitkeep
 ml/reports/*
 !ml/reports/.gitkeep
-apriori/reports/*.csv
+apriori/reports/**/*.csv
 !apriori/reports/.gitkeep
 apriori/runs/
 
