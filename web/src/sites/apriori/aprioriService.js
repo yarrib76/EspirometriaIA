@@ -8,6 +8,7 @@ const APRIORI_ROOT = path.resolve(__dirname, "../../../../apriori");
 const CURRENT_ROOTS = [path.join(APRIORI_ROOT, "data"), path.join(APRIORI_ROOT, "reports")];
 const RUNS_ROOT = path.join(APRIORI_ROOT, "runs");
 const ACTIVE_RUN_FILE = path.join(RUNS_ROOT, "active_run.json");
+const SETTINGS_FILE = path.join(RUNS_ROOT, "configuracion.json");
 const ALLOWED_FILE_ROOTS = [...CURRENT_ROOTS, RUNS_ROOT];
 let activeRun = null;
 
@@ -52,6 +53,49 @@ function normalizeSettings(input = {}) {
     maxRules: integerInRange(input.maxRules, "Máximo de reglas", 1, 1000, 20),
     maxPerConsequent: integerInRange(input.maxPerConsequent, "Máximo por consecuente", 1, 100, 2),
   };
+}
+
+function settingsForClient(settings) {
+  return {
+    ...settings,
+    ruleConfidence: settings.ruleConfidence * 100,
+    selectionConfidence: settings.selectionConfidence * 100,
+  };
+}
+
+async function persistSettings(settings) {
+  await fs.mkdir(RUNS_ROOT, { recursive: true });
+  const document = {
+    version: 1,
+    updatedAt: new Date().toISOString(),
+    settings: settingsForClient(settings),
+  };
+  await fs.writeFile(SETTINGS_FILE, `${JSON.stringify(document, null, 2)}\n`, "utf8");
+  return document;
+}
+
+async function getSettings() {
+  try {
+    const document = JSON.parse(await fs.readFile(SETTINGS_FILE, "utf8"));
+    const settings = normalizeSettings(document.settings);
+    return { persisted: true, updatedAt: document.updatedAt || null, settings: settingsForClient(settings) };
+  } catch (error) {
+    if (error.code === "ENOENT") {
+      return { persisted: false, updatedAt: null, settings: settingsForClient(normalizeSettings()) };
+    }
+    throw new Error(`No se pudo leer la configuración guardada: ${error.message}`);
+  }
+}
+
+async function saveSettings(input = {}) {
+  const settings = normalizeSettings(input);
+  const document = await persistSettings(settings);
+  return { persisted: true, updatedAt: document.updatedAt, settings: document.settings };
+}
+
+async function resetSettings() {
+  await fs.rm(SETTINGS_FILE, { force: true });
+  return { persisted: false, updatedAt: null, settings: settingsForClient(normalizeSettings()) };
 }
 
 function pythonEnvironment() {
@@ -250,6 +294,7 @@ async function runHistoricalPipeline(settings) {
 async function runPipeline(step, input) {
   if (activeRun) { const error = new Error("Ya hay un procesamiento Apriori en ejecución."); error.statusCode = 409; throw error; }
   const settings = normalizeSettings(input);
+  await persistSettings(settings);
   if (step === "all") return runHistoricalPipeline(settings);
   activeRun = { step, startedAt: new Date().toISOString() };
   try { return { historical: false, settings, results: [await executeStep(step, settings)] }; }
@@ -270,6 +315,7 @@ async function selectSupportForRun(runId, input = {}) {
     maxRules: integerInRange(input.maxRules, "Máximo de reglas", 1, 1000, manifest.settings.maxRules),
     maxPerConsequent: integerInRange(input.maxPerConsequent, "Máximo por consecuente", 1, 100, manifest.settings.maxPerConsequent),
   };
+  await persistSettings(settings);
   const runDirectory = path.join(RUNS_ROOT, runId);
   const outputs = runPaths(runDirectory);
   activeRun = { step: "select", runId, startedAt: new Date().toISOString() };
@@ -389,4 +435,4 @@ async function resolveRunZip(runId) {
 
 function getStatus() { return { running: Boolean(activeRun), activeRun }; }
 
-module.exports = { activateRun, getActiveRules, getActiveRunId, getRun, getStatus, listCsvFiles, listRuns, previewCsv, resolveCsvPath, resolveRunZip, runPipeline, selectSupportForRun };
+module.exports = { activateRun, getActiveRules, getActiveRunId, getRun, getSettings, getStatus, listCsvFiles, listRuns, previewCsv, resetSettings, resolveCsvPath, resolveRunZip, runPipeline, saveSettings, selectSupportForRun };

@@ -80,6 +80,30 @@ function status(_req, res) {
   res.json(aprioriService.getStatus());
 }
 
+async function settings(_req, res) {
+  try {
+    return res.json(await aprioriService.getSettings());
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
+  }
+}
+
+async function saveSettings(req, res) {
+  try {
+    return res.json({ ok: true, ...(await aprioriService.saveSettings(req.body.settings)) });
+  } catch (error) {
+    return res.status(400).json({ error: error.message });
+  }
+}
+
+async function resetSettings(_req, res) {
+  try {
+    return res.json({ ok: true, ...(await aprioriService.resetSettings()) });
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
+  }
+}
+
 async function orders(req, res) {
   try {
     return res.json(await orderService.listOrders(req.query));
@@ -123,4 +147,4 @@ async function recommendationProducts(req, res) {
   }
 }
 
-module.exports = { activateRun, download, files, orderDetail, orders, preview, recommend, recommendationProducts, renderHome, run, runDetail, runs, runZip, selectSupport, status };
+module.exports = { activateRun, download, files, orderDetail, orders, preview, recommend, recommendationProducts, renderHome, resetSettings, run, runDetail, runs, runZip, saveSettings, selectSupport, settings, status };
