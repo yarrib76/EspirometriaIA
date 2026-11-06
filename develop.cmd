@@ -11,15 +11,8 @@ set ENV_FILE=%PROJECT_ROOT%\web\.env
 set ENV_EXAMPLE_FILE=%PROJECT_ROOT%\web\.env.example
 set MODELS_DIR=%PROJECT_ROOT%\ml\models
 set RAW_DATA_DIR=%PROJECT_ROOT%\ml\data\raw
-set APRIORI_DATA_DIR=%PROJECT_ROOT%\apriori\data
-set APRIORI_REPORTS_DIR=%PROJECT_ROOT%\apriori\reports
-set APRIORI_RUNS_DIR=%PROJECT_ROOT%\apriori\runs
 set SHOULD_BUILD=1
 set FORCE_NO_CACHE=0
-
-if not exist "%APRIORI_DATA_DIR%" mkdir "%APRIORI_DATA_DIR%"
-if not exist "%APRIORI_REPORTS_DIR%" mkdir "%APRIORI_REPORTS_DIR%"
-if not exist "%APRIORI_RUNS_DIR%" mkdir "%APRIORI_RUNS_DIR%"
 
 if /I "%1"=="rebuild" set SHOULD_BUILD=1
 if /I "%1"=="rebuild" set FORCE_NO_CACHE=1
@@ -62,6 +55,15 @@ if "%SHOULD_PULL%"=="1" (
 ) else (
   echo [1/4] Omitiendo git pull por parametro nopull...
 )
+
+rem Estas rutas se inicializan despues del pull para soportar actualizaciones del propio script.
+set APRIORI_DATA_DIR=%PROJECT_ROOT%\apriori\data
+set APRIORI_REPORTS_DIR=%PROJECT_ROOT%\apriori\reports
+set APRIORI_RUNS_DIR=%PROJECT_ROOT%\apriori\runs
+
+if not exist "%APRIORI_DATA_DIR%" mkdir "%APRIORI_DATA_DIR%"
+if not exist "%APRIORI_REPORTS_DIR%" mkdir "%APRIORI_REPORTS_DIR%"
+if not exist "%APRIORI_RUNS_DIR%" mkdir "%APRIORI_RUNS_DIR%"
 
 echo [2/4] Eliminando contenedor anterior si existe...
 docker rm -f %CONTAINER_NAME% >nul 2>nul
