@@ -15,9 +15,12 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 
 COPY ml/requirements.txt /app/ml/requirements.txt
+COPY apriori/requirements.txt /app/apriori/requirements.txt
 RUN python3 -m venv /opt/venv \
     && /opt/venv/bin/python -m pip install --upgrade pip setuptools wheel \
-    && /opt/venv/bin/python -m pip install -r /app/ml/requirements.txt
+    && /opt/venv/bin/python -m pip install \
+        -r /app/ml/requirements.txt \
+        -r /app/apriori/requirements.txt
 
 COPY web/package*.json /app/web/
 WORKDIR /app/web
