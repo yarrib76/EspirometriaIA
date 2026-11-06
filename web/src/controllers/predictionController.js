@@ -2,10 +2,10 @@ const predictionRequest = require("../models/predictionRequest");
 const mlApiClient = require("../services/mlApiClient");
 const mlTrainingClient = require("../services/mlTrainingClient");
 const openaiPdfExtractor = require("../services/openaiPdfExtractor");
-const { renderHomePage } = require("../views/homeView");
+const { renderHomePage: renderSpirometryHomePage } = require("../views/homeView");
 
-async function renderHome(req, res) {
-  res.type("html").send(renderHomePage());
+async function renderSpirometryHome(req, res) {
+  res.type("html").send(renderSpirometryHomePage());
 }
 
 async function health(req, res) {
@@ -86,7 +86,7 @@ async function reportImage(req, res) {
 }
 
 module.exports = {
-  renderHome,
+  renderSpirometryHome,
   health,
   predict,
   extractPdf,

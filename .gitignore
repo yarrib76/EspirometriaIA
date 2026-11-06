@@ -11,6 +11,7 @@ __pycache__/
 .mypy_cache/
 .ruff_cache/
 ml/.venv/
+apriori/.venv/
 venv/
 
 # Node
@@ -29,12 +30,19 @@ ml/data/raw/*.csv
 ml/data/processed/*
 !ml/data/processed/.gitkeep
 !ml/data/raw/.gitkeep
+apriori/data/extracted/*.csv
+apriori/data/processed/*.csv
+!apriori/data/extracted/.gitkeep
+!apriori/data/processed/.gitkeep
 
 # Trained models and reports
 ml/models/*
 !ml/models/.gitkeep
 ml/reports/*
 !ml/reports/.gitkeep
+apriori/reports/*.csv
+!apriori/reports/.gitkeep
+apriori/runs/
 
 # Local artifacts
 *.log
