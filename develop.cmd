@@ -11,8 +11,15 @@ set ENV_FILE=%PROJECT_ROOT%\web\.env
 set ENV_EXAMPLE_FILE=%PROJECT_ROOT%\web\.env.example
 set MODELS_DIR=%PROJECT_ROOT%\ml\models
 set RAW_DATA_DIR=%PROJECT_ROOT%\ml\data\raw
+set APRIORI_DATA_DIR=%PROJECT_ROOT%\apriori\data
+set APRIORI_REPORTS_DIR=%PROJECT_ROOT%\apriori\reports
+set APRIORI_RUNS_DIR=%PROJECT_ROOT%\apriori\runs
 set SHOULD_BUILD=1
 set FORCE_NO_CACHE=0
+
+if not exist "%APRIORI_DATA_DIR%" mkdir "%APRIORI_DATA_DIR%"
+if not exist "%APRIORI_REPORTS_DIR%" mkdir "%APRIORI_REPORTS_DIR%"
+if not exist "%APRIORI_RUNS_DIR%" mkdir "%APRIORI_RUNS_DIR%"
 
 if /I "%1"=="rebuild" set SHOULD_BUILD=1
 if /I "%1"=="rebuild" set FORCE_NO_CACHE=1
@@ -85,6 +92,9 @@ docker run -d ^
   -e PORT=6060 ^
   -v "%MODELS_DIR%:/app/ml/models" ^
   -v "%RAW_DATA_DIR%:/app/ml/data/raw" ^
+  -v "%APRIORI_DATA_DIR%:/app/apriori/data" ^
+  -v "%APRIORI_REPORTS_DIR%:/app/apriori/reports" ^
+  -v "%APRIORI_RUNS_DIR%:/app/apriori/runs" ^
   %IMAGE_NAME%
 
 if errorlevel 1 (

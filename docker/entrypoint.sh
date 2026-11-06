@@ -4,8 +4,15 @@ set -e
 APP_ROOT="/app"
 ML_DIR="$APP_ROOT/ml"
 WEB_DIR="$APP_ROOT/web"
+APRIORI_DIR="$APP_ROOT/apriori"
 
 mkdir -p "$ML_DIR/data/raw" "$ML_DIR/models" "$ML_DIR/reports"
+mkdir -p \
+  "$APRIORI_DIR/data/extracted" \
+  "$APRIORI_DIR/data/processed" \
+  "$APRIORI_DIR/reports/itemsets" \
+  "$APRIORI_DIR/reports/rules" \
+  "$APRIORI_DIR/runs"
 
 MODEL_COUNT=$(find "$ML_DIR/models" -maxdepth 1 -type d -name 'exp_*' | wc -l | tr -d ' ')
 
