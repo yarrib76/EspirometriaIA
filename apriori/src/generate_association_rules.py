@@ -15,6 +15,23 @@ DEFAULT_ITEMSETS_DIR = PROJECT_DIR / "reports" / "itemsets"
 DEFAULT_OUTPUT_DIR = PROJECT_DIR / "reports" / "rules"
 DEFAULT_MATRIX = PROJECT_DIR / "data" / "processed" / "matriz_binaria.csv"
 DEFAULT_SUPPORTS = (2, 3, 4)
+REPORT_COLUMNS = [
+    "antecedente",
+    "consecuente",
+    "cantidad_antecedente",
+    "cantidad_consecuente",
+    "cantidad_facturas",
+    "soporte",
+    "soporte_porcentaje",
+    "confianza",
+    "confianza_porcentaje",
+    "lift",
+    "soporte_antecedente",
+    "soporte_consecuente",
+    "soporte_minimo",
+    "confianza_minima",
+    "lift_minimo_exclusivo",
+]
 
 
 def parse_args() -> argparse.Namespace:
@@ -90,6 +107,9 @@ def build_report(
     min_confidence: float,
     min_lift: float,
 ) -> pd.DataFrame:
+    if itemsets.empty or not itemsets["itemsets"].map(len).ge(2).any():
+        return pd.DataFrame(columns=REPORT_COLUMNS)
+
     rules = association_rules(
         itemsets,
         metric="confidence",

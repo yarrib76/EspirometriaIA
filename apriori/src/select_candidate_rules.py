@@ -59,8 +59,6 @@ def load_rules(path: Path) -> pd.DataFrame:
     missing = required.difference(rules.columns)
     if missing:
         raise ValueError(f"Faltan columnas requeridas: {sorted(missing)}")
-    if rules.empty:
-        raise ValueError("El archivo de reglas está vacío")
     if rules.duplicated(["antecedente", "consecuente"]).any():
         raise ValueError("El archivo contiene reglas duplicadas")
     return rules
